@@ -116,7 +116,12 @@ function LoginPage() {
       toast.error("Enter your email first");
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    const client = getSupabase();
+    if (!client) {
+      toast.error("Online accounts aren't connected yet. Connect your Supabase project in project Settings, then try again.");
+      return;
+    }
+    const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) toast.error(error.message);
@@ -157,6 +162,12 @@ function LoginPage() {
               ? "Use your shop account email and password."
               : "The first account created becomes the shop Admin."}
           </p>
+          {backendMissing && (
+            <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              Offline mode: the online account service isn't connected yet. Connect your Supabase
+              project in project Settings → External Supabase. Local billing data still works.
+            </p>
+          )}
           <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === "signup" && (
               <div className="space-y-2">

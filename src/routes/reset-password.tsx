@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/reset-password")({
@@ -21,15 +21,20 @@ function ResetPasswordPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const client = getSupabase();
+    if (!client) {
+      toast.error("Online accounts aren't connected yet. Connect your Supabase project in project Settings.");
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await client.auth.updateUser({ password });
     setLoading(false);
     if (error) {
       toast.error(error.message);
       return;
     }
     toast.success("Password updated. Please sign in.");
-    await supabase.auth.signOut();
+    await client.auth.signOut();
     navigate({ to: "/login" });
   };
 
