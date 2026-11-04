@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { initDb } from "@/lib/db";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { loadSessionUser } from "@/lib/account";
 import { markEverythingDirty, syncNow } from "@/lib/sync";
 import { useAuth } from "@/store/auth";
@@ -38,9 +38,13 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [backendMissing, setBackendMissing] = useState(false);
 
   useEffect(() => {
     void initDb();
+  }, []);
+  useEffect(() => {
+    setBackendMissing(!getSupabase());
   }, []);
   useEffect(() => {
     if (hydrated && user) navigate({ to: "/" });
@@ -62,10 +66,15 @@ function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const client = getSupabase();
+    if (!client) {
+      toast.error("Online accounts aren't connected yet. Connect your Supabase project in project Settings, then try again.");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await client.auth.signUp({
           email: email.trim(),
           password,
           options: {
@@ -86,7 +95,7 @@ function LoginPage() {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await client.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
