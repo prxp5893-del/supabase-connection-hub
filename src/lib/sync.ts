@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getDb, type GroceryDB } from "./db";
 
 /** Dexie tables mirrored to the cloud. */
@@ -112,7 +113,7 @@ export function registerSyncHooks(db: GroceryDB) {
   setState({ pending: countDirty(readDirty()) });
 }
 
-async function pushDirty(db: GroceryDB) {
+async function pushDirty(db: GroceryDB, client: SupabaseClient) {
   const map = readDirty();
   const rows: {
     entity: string;

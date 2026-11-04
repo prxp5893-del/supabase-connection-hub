@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/common/states";
 import { getDb, initDb } from "@/lib/db";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { loadSessionUser } from "@/lib/account";
 import {
   getSyncState,
