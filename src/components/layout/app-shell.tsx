@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/common/states";
 import { getDb, initDb } from "@/lib/db";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { loadSessionUser } from "@/lib/account";
 import {
   getSyncState,
@@ -137,7 +137,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         setChecked(true);
       }
     })();
-    const { data } = supabase.auth.onAuthStateChange((event) => {
+    const client = getSupabase();
+    if (!client) return;
+    const { data } = client.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") logout();
     });
     return () => data.subscription.unsubscribe();
@@ -148,8 +150,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [hydrated, checked, user, navigate]);
 
   const signOut = async () => {
-    await syncNow();
-    await supabase.auth.signOut();
+    const client = getSupabase();
+    if (client) {
+      await syncNow();
+      await client.auth.signOut();
+    }
     resetSyncState();
     logout();
     navigate({ to: "/login" });

@@ -1,20 +1,22 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import type { Role } from "./types";
 import type { SessionUser } from "@/store/auth";
 
 /** Loads the signed-in staff member's name and role from the cloud. */
 export async function loadSessionUser(): Promise<SessionUser | null> {
-  const { data: auth } = await supabase.auth.getUser();
+  const client = getSupabase();
+  if (!client) return null;
+  const { data: auth } = await client.auth.getUser();
   const authUser = auth.user;
   if (!authUser) return null;
 
   const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from("profiles").select("name, email, active").eq("id", authUser.id).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", authUser.id),
+    client.from("profiles").select("name, email, active").eq("id", authUser.id).maybeSingle(),
+    client.from("user_roles").select("role").eq("user_id", authUser.id),
   ]);
 
   if (profile && profile.active === false) {
-    await supabase.auth.signOut();
+    await client.auth.signOut();
     return null;
   }
 

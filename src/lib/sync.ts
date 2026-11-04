@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getDb, type GroceryDB } from "./db";
 
 /** Dexie tables mirrored to the cloud. */
@@ -112,7 +113,7 @@ export function registerSyncHooks(db: GroceryDB) {
   setState({ pending: countDirty(readDirty()) });
 }
 
-async function pushDirty(db: GroceryDB) {
+async function pushDirty(db: GroceryDB, client: SupabaseClient) {
   const map = readDirty();
   const rows: {
     entity: string;
@@ -145,7 +146,7 @@ async function pushDirty(db: GroceryDB) {
   if (!rows.length) return;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
-    const { error } = await supabase
+    const { error } = await client
       .from("shop_records")
       .upsert(chunk, { onConflict: "entity,local_id" });
     if (error) throw error;
@@ -153,12 +154,12 @@ async function pushDirty(db: GroceryDB) {
   writeDirty({});
 }
 
-async function pullRemote(db: GroceryDB) {
+async function pullRemote(db: GroceryDB, client: SupabaseClient) {
   const since = localStorage.getItem(CURSOR_KEY) ?? "1970-01-01T00:00:00Z";
   let cursor = since;
   let page = 0;
   for (;;) {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("shop_records")
       .select("entity, local_id, payload, deleted, updated_at")
       .gt("updated_at", since)
@@ -193,7 +194,9 @@ async function pullRemote(db: GroceryDB) {
 export async function syncNow(): Promise<void> {
   if (typeof window === "undefined" || running) return;
   if (!navigator.onLine) return;
-  const { data } = await supabase.auth.getSession();
+  const client = getSupabase();
+  if (!client) return;
+  const { data } = await client.auth.getSession();
   if (!data.session) return;
 
   running = true;
@@ -201,8 +204,8 @@ export async function syncNow(): Promise<void> {
   const db = getDb();
   try {
     registerSyncHooks(db);
-    await pushDirty(db);
-    await pullRemote(db);
+    await pushDirty(db, client);
+    await pullRemote(db, client);
     setState({ status: "idle", last: new Date().toISOString(), pending: countDirty(readDirty()) });
   } catch (error) {
     console.error("sync failed", error);
